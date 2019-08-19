@@ -6,9 +6,10 @@ import           Web.Telegram.API.Bot
 import           Control.Concurrent
 import           Control.Monad
 
+token::String
 token = "730943178:AAHB2p0mRiTsH4F-J8LcIGEooLIEsMogqH8"
 
-
+waitDelay::Int
 waitDelay = 1_000_000
 
 

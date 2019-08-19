@@ -13,6 +13,5 @@ mkDerivation {
   executableHaskellDepends = [
     base http-client http-client-tls telegram-api
   ];
-  doHaddock = false;
   license = stdenv.lib.licenses.mit;
 }

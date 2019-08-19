@@ -18,9 +18,13 @@ extra-source-files:  CHANGELOG.md
 
 library
   exposed-modules:
-  Bot 
+    Bot 
   -- other-modules:
-  -- other-extensions:
+  default-extensions:
+    NumericUnderscores
+    OverloadedStrings
+    BlockArguments
+
   build-depends:       base ^>=4.12.0.0
                       ,http-client
                       ,http-client-tls
