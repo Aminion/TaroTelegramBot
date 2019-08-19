@@ -10,8 +10,8 @@ mkDerivation {
   version = "0.7.1.0";
   src = fetchgit {
     url = "https://github.com/Aminion/haskell-telegram-api";
-    sha256 = "0nhdrfpmyl801pi8ck3p3kivlkcpjxjjr3frfr2rafai1z12q7a0";
-    rev = "111b22a87f4669a4c31d8f67dddf28393b86b7be";
+    sha256 = "01m36dwdhsd4js4s42i9l1y9rlnvk4yj72y24rnjmjxf39qq981m";
+    rev = "b6c044ed32492f063dfc1925f0e2dfb34fde0ebf";
     fetchSubmodules = true;
   };
   enableSeparateDataOutput = true;

@@ -1,4 +1,5 @@
 module Main where
+import Bot
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = mainLoop
