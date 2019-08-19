@@ -1,14 +1,11 @@
-{ nixpkgs ? import <nixpkgs> {} }:
 let
-  inherit (nixpkgs) pkgs;
-  inherit (pkgs) haskellPackages;
-
-  project = import ./release.nix;
+  release = import ./release.nix;
+  pkgs = release.pkgs;
 in
-pkgs.stdenv.mkDerivation {
-  name = "shell";
-  buildInputs = project.stdenv.nativeBuildInputs ++ [
-    haskellPackages.cabal-install
-    haskellPackages.ghcid
+pkgs.haskellPackages.shellFor {
+  nativeBuildInputs = with pkgs.haskellPackages; [
+    cabal-install
+    ghcid
   ];
+  packages = _: pkgs.lib.attrValues release.packages;
 }

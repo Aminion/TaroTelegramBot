@@ -11,5 +11,8 @@ let
     telegram-api = new.callPackage ./derivations/telegram-api.nix {};
   };
 
-in
-  pkgs.haskellPackages.callPackage ./default.nix { }
+in{
+  inherit pkgs;
+  packages = { inherit (pkgs.haskellPackages); };
+}
+  
