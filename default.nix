@@ -1,5 +1,5 @@
-{ mkDerivation, base, http-client, http-client-tls, stdenv
-, telegram-api
+{ mkDerivation, base, http-client, http-client-tls, lifted-async
+, mtl, random, servant-client-core, stdenv, stm, telegram-api, text
 }:
 mkDerivation {
   pname = "TaroTelegramBot";
@@ -8,10 +8,12 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    base http-client http-client-tls telegram-api
+    base http-client http-client-tls lifted-async mtl random
+    servant-client-core stm telegram-api text
   ];
   executableHaskellDepends = [
-    base http-client http-client-tls telegram-api
+    base http-client http-client-tls lifted-async mtl random
+    servant-client-core stm telegram-api text
   ];
   license = stdenv.lib.licenses.mit;
 }
