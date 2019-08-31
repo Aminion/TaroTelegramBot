@@ -1,5 +1,5 @@
 let
-  pkgs = import <nixpkgs> { inherit config; };
+  pkgs = import ./pkgs.nix { inherit config; };
 
   config = {
     packageOverrides = pkgs: rec {    
