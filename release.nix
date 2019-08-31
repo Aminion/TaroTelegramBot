@@ -8,7 +8,7 @@ let
   };
 
   haskOverrides = new: old: rec {
-    TaroTelegramBot = new.callPackage ./. {};
+    TaroTelegramBot = new.callCabal2nix "TaroTelegramBot" ./. {};
     telegram-api = new.callPackage ./derivations/telegram-api.nix {};
   };
 
