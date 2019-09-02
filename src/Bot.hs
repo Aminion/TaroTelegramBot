@@ -51,7 +51,7 @@ stickerPackIds = map sticker_file_id . stcr_set_stickers . result
     
 
 getStickersPackRandomM :: RandomGen g => g -> Int -> [Int]
-getStickersPackRandomM gen packLenght = randomRs (0, packLenght) gen
+getStickersPackRandomM gen packLenght = randomRs (0, succ packLenght) gen
 
 taroAnswers :: RandomGen g => g -> UpdatesResponse -> Response StickerSet -> [SendStickerRequest Text]
 taroAnswers gen updateResponse stickerPackResponse = let
