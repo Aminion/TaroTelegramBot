@@ -1,5 +1,5 @@
 module Bot where
-import Network.HTTP.Client      (newManager)
+import Network.HTTP.Client      (Manager, newManager)
 import Network.HTTP.Client.TLS  (tlsManagerSettings)
 import Web.Telegram.API.Bot
 import Control.Monad
@@ -8,10 +8,16 @@ import Data.Text (Text, pack)
 import Data.Maybe
 import System.Random
 --import Control.Concurrent.Async.Lifted.Safe
---import Control.Monad.Reader
+import Control.Monad.Reader
 --import Control.Concurrent.STM
 --import Servant.Client.Core.Internal.Request(ServantError)
 import Data.IORef
+
+data Env = Env { updateOffset :: IORef (Maybe Int)
+               , token        :: Token
+               , manager      :: Manager
+               , generator          :: StdGen
+               }
 
 readTokenString :: IO String 
 readTokenString = readFile "token.cfg"
@@ -56,21 +62,30 @@ taroAnswers gen updateResponse stickerPackResponse = let
     in zipWith res taroR rnd
 
 getLastProcessed :: [Update] -> Maybe Int   
-getLastProcessed updates  = if null updates then Nothing  else succ <$> (Just $ maximum $ map update_id updates)
+getLastProcessed updates = 
+    case updates of
+    [] -> Nothing
+    xs -> Just $ succ $ maximum $ map update_id xs
 
-
-
-mainLoop :: IO ()
+mainLoop :: ReaderT Env IO ()
 mainLoop = do
+    env <- ask
+    _ <- liftIO $ runTelegramClient (token env) (manager env) $ forever $ do
+            stickerPackResponse <- getStickerSetM stickersPackName
+            lastProcessed <- liftIO $ readIORef $ updateOffset env
+            updateResponse <- getUpdatesM $ updateRequest lastProcessed
+            _<- liftIO $ writeIORef (updateOffset env) $ getLastProcessed $ result $ updateResponse
+            _<- sequence $ sendStickerM <$> taroAnswers (generator env) updateResponse stickerPackResponse
+            liftIO $ pure ()
+    pure ()
+
+initBot :: IO ()
+initBot = do
     putStrLn "start"
-    token <- getToken
-    manager <- newManager tlsManagerSettings
-    lastProcessedRef <- newIORef Nothing
-    _ <- runTelegramClient token manager $ forever $ do        
-        gen <- liftIO newStdGen
-        stickerPackResponse <- getStickerSetM stickersPackName
-        lastProcessed <- liftIO $ readIORef lastProcessedRef
-        updateResponse <- getUpdatesM $ updateRequest lastProcessed
-        liftIO $ writeIORef lastProcessedRef $ getLastProcessed $ result $ updateResponse
-        sequence $ sendStickerM <$> taroAnswers gen updateResponse stickerPackResponse    
-    putStrLn ""
+
+    env <- Env <$> newIORef Nothing
+               <*> getToken
+               <*> (newManager tlsManagerSettings)
+               <*> newStdGen
+
+    runReaderT mainLoop env
