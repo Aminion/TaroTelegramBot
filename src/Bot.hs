@@ -16,7 +16,7 @@ import Data.IORef
 data Env = Env { updateOffset :: IORef (Maybe Int)
                , token        :: Token
                , manager      :: Manager
-               , generator          :: StdGen
+               , generator    :: StdGen
                }
 
 readTokenString :: IO String 
@@ -32,7 +32,7 @@ updateRequest :: Maybe Int -> GetUpdatesRequest
 updateRequest lastProcessed = GetUpdatesRequest { updates_offset          = lastProcessed 
                                                 , updates_limit           = Nothing
                                                 , updates_timeout         = Just 6
-                                                , updates_allowed_updates = Just [ pack "message"] 
+                                                , updates_allowed_updates = Just [pack "message"] 
                                                 }
 
 taroStickerAnswer :: ChatId -> Text -> SendStickerRequest Text
@@ -74,7 +74,7 @@ mainLoop = do
             stickerPackResponse <- getStickerSetM stickersPackName
             lastProcessed <- liftIO $ readIORef $ updateOffset env
             updateResponse <- getUpdatesM $ updateRequest lastProcessed
-            _<- liftIO $ writeIORef (updateOffset env) $ getLastProcessed $ result $ updateResponse
+            liftIO $ writeIORef (updateOffset env) $ getLastProcessed $ result $ updateResponse
             sequence $ sendStickerM <$> taroAnswers (generator env) updateResponse stickerPackResponse
     pure ()
 
