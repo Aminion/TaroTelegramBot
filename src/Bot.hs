@@ -75,8 +75,7 @@ mainLoop = do
             lastProcessed <- liftIO $ readIORef $ updateOffset env
             updateResponse <- getUpdatesM $ updateRequest lastProcessed
             _<- liftIO $ writeIORef (updateOffset env) $ getLastProcessed $ result $ updateResponse
-            _<- sequence $ sendStickerM <$> taroAnswers (generator env) updateResponse stickerPackResponse
-            liftIO $ pure ()
+            sequence $ sendStickerM <$> taroAnswers (generator env) updateResponse stickerPackResponse
     pure ()
 
 initBot :: IO ()
