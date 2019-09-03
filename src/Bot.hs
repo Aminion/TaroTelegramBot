@@ -1,90 +1,74 @@
 module Bot where
-import Network.HTTP.Client      (Manager, newManager)
-import Network.HTTP.Client.TLS  (tlsManagerSettings)
 import Web.Telegram.API.Bot
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Text (Text, pack)
 import Data.Maybe
 import System.Random
---import Control.Concurrent.Async.Lifted.Safe
 import Control.Monad.Reader
---import Control.Concurrent.STM
---import Servant.Client.Core.Internal.Request(ServantError)
 import Data.IORef
+import Data.List.Split
+import Env
+import Requests
 
-data Env = Env { updateOffset :: IORef (Maybe Int)
-               , token        :: Token
-               , manager      :: Manager
-               , generator    :: StdGen
-               }
-
-readTokenString :: IO String 
-readTokenString = readFile "token.cfg"
-
-stickersPackName :: Text
-stickersPackName = pack "TarotDeck66664545454"
-
-getToken :: IO Token
-getToken = Token . pack <$> readFile "token.cfg"
-
-updateRequest :: Maybe Int -> GetUpdatesRequest
-updateRequest lastProcessed = GetUpdatesRequest { updates_offset          = lastProcessed 
-                                                , updates_limit           = Nothing
-                                                , updates_timeout         = Just 6
-                                                , updates_allowed_updates = Just [pack "message"] 
-                                                }
-
-taroStickerAnswer :: ChatId -> Text -> SendStickerRequest Text
-taroStickerAnswer chatId stickerId = SendStickerRequest { sticker_chat_id              = chatId
-                                                        , sticker_sticker              = stickerId
-                                                        , sticker_disable_notification = Nothing
-                                                        , sticker_reply_to_message_id  = Nothing
-                                                        , sticker_reply_markup         = Nothing
-                                                        }
-
-taroRequests :: UpdatesResponse -> [ChatId]            
-taroRequests = mapMaybe (pure . ChatId . fromIntegral . user_id <=< from <=< message) . result
-
-stickerPackIds :: Response StickerSet -> [Text]            
-stickerPackIds = map sticker_file_id . stcr_set_stickers . result
+tarotRequests :: UpdatesResponse -> [ChatId]            
+tarotRequests = mapMaybe (pure . ChatId . fromIntegral . user_id <=< from <=< message) . result
     
+data TarotChoice = Upright Int | Reversed Int   
 
-getStickersPackRandomM :: RandomGen g => g -> Int -> [Int]
-getStickersPackRandomM gen packLenght = randomRs (0, succ packLenght) gen
+deckRandomM :: RandomGen g => g -> Int -> [TarotChoice]
+deckRandomM gen deckLenght = choice <$> (splittedRandoms $ randomRs (0, pred deckLenght) gen)
+            where choice [cardFlip, indexInDeck] = (if even cardFlip then Upright else Reversed) indexInDeck
+                  splittedRandoms = chunksOf 2
 
-taroAnswers :: RandomGen g => g -> UpdatesResponse -> Response StickerSet -> [SendStickerRequest Text]
-taroAnswers gen updateResponse stickerPackResponse = let
-    packIds = stickerPackIds stickerPackResponse
-    rnd = getStickersPackRandomM gen (length packIds) 
-    taroR = taroRequests updateResponse
-    res req ran = taroStickerAnswer req $ packIds !! ran
-    in zipWith res taroR rnd
+type Divination = (SendStickerRequest Text , SendMessageRequest)
 
-getLastProcessed :: [Update] -> Maybe Int   
-getLastProcessed updates = 
+divination :: (TarotCardInfoModel -> String) -> ChatId -> TarotCardInfoModel -> Divination
+divination textSelector chatId cardDescription =
+    ( taroStickerAnswer chatId (stickerId cardDescription)
+    , taroMessageAnswer chatId msgText
+    )
+    where
+        msgText = pack $ desc ++ "\n<a href='" ++ fullDescLink ++ "'>Full description</a>"
+        desc = textSelector cardDescription
+        fullDescLink = fullDescription cardDescription
+
+divinations :: RandomGen g => g -> UpdatesResponse -> [TarotCardInfoModel] -> [Divination]
+divinations gen updateResponse deck = let
+    deckRandom = deckRandomM gen (length deck) 
+    taroReq = tarotRequests updateResponse
+    res req ran = 
+        case ran of Upright  idx -> divination upright  req $ deck !! idx
+                    Reversed idx -> divination reversed req $ deck !! idx
+    in zipWith res taroReq deckRandom
+
+getUpdateOffset :: [Update] -> Maybe Int   
+getUpdateOffset updates = 
     case updates of
     [] -> Nothing
     xs -> Just $ succ $ maximum $ map update_id xs
+
+
+
+sendDivination :: Divination -> TelegramClient ()
+sendDivination (stickerRequest, messageRequest) = void $ sendStickerM stickerRequest >> sendMessageM messageRequest 
 
 mainLoop :: ReaderT Env IO ()
 mainLoop = do
     env <- ask
     _ <- liftIO $ runTelegramClient (token env) (manager env) $ forever $ do
-            stickerPackResponse <- getStickerSetM stickersPackName
-            lastProcessed <- liftIO $ readIORef $ updateOffset env
-            updateResponse <- getUpdatesM $ updateRequest lastProcessed
-            liftIO $ writeIORef (updateOffset env) $ getLastProcessed $ result $ updateResponse
-            sequence $ sendStickerM <$> taroAnswers (generator env) updateResponse stickerPackResponse
-    pure ()
+            currentUpdateOffset <- liftIO $ readIORef $ updateOffset env
+            updateResponse <- getUpdatesM $ updateRequest currentUpdateOffset
+            let newUpdateOffset = getUpdateOffset $ result $ updateResponse
+            liftIO $ writeIORef (updateOffset env) newUpdateOffset
+            generator <- liftIO newStdGen
+            let divinationsResult = divinations (generator) updateResponse (deckDescription env)
+            sequence_ $ sendDivination <$> divinationsResult 
+    pure ()                                       
 
 initBot :: IO ()
 initBot = do
     putStrLn "start"
-
-    env <- Env <$> newIORef Nothing
-               <*> getToken
-               <*> (newManager tlsManagerSettings)
-               <*> newStdGen
-
-    runReaderT mainLoop env
+    env <- getEnv
+    r <- runReaderT mainLoop env
+    putStrLn $ show r

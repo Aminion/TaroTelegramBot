@@ -18,13 +18,16 @@ extra-source-files:  CHANGELOG.md
 
 library
   exposed-modules:
-    Bot 
+    Bot
+    Env
+    Requests
   -- other-modules:
   default-extensions:
     NumericUnderscores
     OverloadedStrings
     BlockArguments
     TypeApplications
+    DeriveGeneric
 
   build-depends:       base ^>=4.12.0.0
                       ,text
@@ -32,6 +35,10 @@ library
                       ,mtl
                       ,stm
                       ,lifted-async
+                      ,bytestring
+                      ,aeson
+                      ,split
+                      ,containers
                       ,http-client
                       ,http-client-tls
                       ,telegram-api
@@ -48,6 +55,7 @@ executable TaroTelegramBot
     OverloadedStrings
     BlockArguments
     TypeApplications
+    DeriveGeneric
 
   build-depends:       base ^>=4.12.0.0
                       ,text
@@ -55,6 +63,10 @@ executable TaroTelegramBot
                       ,mtl
                       ,stm
                       ,lifted-async
+                      ,bytestring
+                      ,aeson
+                      ,split
+                      ,containers
                       ,http-client
                       ,http-client-tls
                       ,telegram-api
